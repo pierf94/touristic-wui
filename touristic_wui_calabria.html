@@ -224,10 +224,9 @@
 
   <!-- Pannello info hover in alto a destra -->
   <div id="info-panel">
-    <div id="info-hint">Passa il mouse su un comune</div>
-    <div id="info-content" style="display:none;">
-      <div id="info-nome"></div>
-      <div id="info-valore"></div>
+    <div id="info-content">
+      <div id="info-nome">—</div>
+      <div id="info-valore">—</div>
     </div>
   </div>
 
@@ -375,7 +374,7 @@
         const props = e.features[0].properties;
         map.getCanvas().style.cursor = 'pointer';
 
-        const nome = props.NOME_COM || props.name || props.Nome || props.NOME || '';
+        const nome = props.LAU_NAME || '';
         const valore = props.WUI_A_rel_visual !== undefined
           ? Number(props.WUI_A_rel_visual).toFixed(6)
           : 'N/D';
@@ -387,7 +386,6 @@
         tooltip.style.top  = (e.point.y - 10) + 'px';
 
         // Pannello info fisso
-        document.getElementById('info-hint').style.display = 'none';
         document.getElementById('info-content').style.display = 'block';
         document.getElementById('info-nome').textContent = nome;
         document.getElementById('info-valore').textContent = 'WUI / Comune: ' + valore;
@@ -396,8 +394,8 @@
       map.on('mouseleave', 'comuni-layer', () => {
         map.getCanvas().style.cursor = '';
         tooltip.style.display = 'none';
-        document.getElementById('info-hint').style.display = 'block';
-        document.getElementById('info-content').style.display = 'none';
+        document.getElementById('info-nome').textContent = '—';
+        document.getElementById('info-valore').textContent = '—';
       });
 
       // ── TOOLTIP HDI ───────────────────────────────────────────────────
@@ -405,7 +403,7 @@
         const props = e.features[0].properties;
         map.getCanvas().style.cursor = 'pointer';
 
-        const nome = props.NOME_COM || props.name || props.Nome || props.NOME || '';
+        const nome = props.LAU_NAME || '';
         const valore = props.HDI !== undefined
           ? Number(props.HDI).toFixed(6)
           : 'N/D';
@@ -415,7 +413,6 @@
         tooltip.style.left = (e.point.x + 14) + 'px';
         tooltip.style.top  = (e.point.y - 10) + 'px';
 
-        document.getElementById('info-hint').style.display = 'none';
         document.getElementById('info-content').style.display = 'block';
         document.getElementById('info-nome').textContent = nome;
         document.getElementById('info-valore').textContent = 'HDI: ' + valore;
@@ -424,8 +421,8 @@
       map.on('mouseleave', 'hdi-layer', () => {
         map.getCanvas().style.cursor = '';
         tooltip.style.display = 'none';
-        document.getElementById('info-hint').style.display = 'block';
-        document.getElementById('info-content').style.display = 'none';
+        document.getElementById('info-nome').textContent = '—';
+        document.getElementById('info-valore').textContent = '—';
       });
 
     }); // fine map.on('load')
