@@ -178,26 +178,7 @@
       line-height: 1.6;
     }
 
-    /* ── BOTTONE CARICA GEOJSON ── */
-    #load-btn {
-      position: absolute;
-      bottom: 30px;
-      right: 16px;
-      z-index: 10;
-      background: #c0392b;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      letter-spacing: 0.05em;
-      transition: background 0.2s;
-    }
 
-    #load-btn:hover { background: #e74c3c; }
-
-    #file-input { display: none; }
   </style>
 </head>
 <body>
@@ -214,46 +195,41 @@
   <div id="layer-panel">
     <h2>Layer</h2>
 
-    <!-- Esempio layer 1 - WUI -->
     <div class="layer-toggle">
-      <label for="toggle-wui">WUI Polygons</label>
+      <label for="toggle-comuni">Comuni Calabria</label>
       <label class="switch">
-        <input type="checkbox" id="toggle-wui" checked onchange="toggleLayer('wui-layer', this.checked)">
+        <input type="checkbox" id="toggle-comuni" checked onchange="toggleLayer('comuni-layer', this.checked)">
         <span class="slider"></span>
       </label>
     </div>
-
-    <!-- Esempio layer 2 - THS -->
-    <div class="layer-toggle">
-      <label for="toggle-ths">THS Hotspot</label>
-      <label class="switch">
-        <input type="checkbox" id="toggle-ths" checked onchange="toggleLayer('ths-layer', this.checked)">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <!-- Aggiungi altri layer qui sopra con lo stesso pattern -->
   </div>
 
   <!-- Legenda -->
   <div id="legend">
-    <h2>Legenda</h2>
+    <h2>WUI Area / Comune</h2>
     <div class="legend-item">
-      <div class="legend-color" style="background:#e74c3c;opacity:0.8;"></div>
-      <span>WUI Area</span>
+      <div class="legend-color" style="background:#fde8e8;"></div>
+      <span>Molto basso</span>
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background:#f39c12;opacity:0.8;"></div>
-      <span>THS Hotspot</span>
+      <div class="legend-color" style="background:#f48a8a;"></div>
+      <span>Basso</span>
     </div>
-    <!-- Aggiungi altre voci legenda qui -->
+    <div class="legend-item">
+      <div class="legend-color" style="background:#e74c3c;"></div>
+      <span>Medio</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#922b21;"></div>
+      <span>Alto</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#1a0000;"></div>
+      <span>Molto alto</span>
+    </div>
   </div>
 
-  <!-- Bottone carica GeoJSON da file locale -->
-  <button id="load-btn" onclick="document.getElementById('file-input').click()">
-    + Carica GeoJSON
-  </button>
-  <input type="file" id="file-input" accept=".geojson,.json" onchange="loadGeoJSON(this)">
+
 
   <script>
     // ══════════════════════════════════════════════
@@ -261,7 +237,7 @@
     // ══════════════════════════════════════════════
 
     // ⚠️ Sostituisci con il tuo token da mapbox.com/account/access-tokens
-    mapboxgl.accessToken = 'pk.eyJ1IjoicGllcnBhb2xvMSIsImEiOiJjbW9weG43cG0wczdmMnJxdHgyaTlqZmViIn0.3Cg-OIGgm6p--4SfnPsXxQ';
+    mapboxgl.accessToken = 'IL_TUO_ACCESS_TOKEN_QUI';
 
     // Centro sulla Calabria
     const map = new mapboxgl.Map({
@@ -286,88 +262,54 @@
 
     map.on('load', () => {
 
-      // ── LAYER WUI (esempio con GeoJSON inline o URL) ──────────────────
-      // Puoi sostituire il GeoJSON inline con un URL:
-      //   data: 'https://tuoserver.com/wui.geojson'
-      // oppure con un file locale caricato via loadGeoJSON()
-
-      map.addSource('wui-source', {
+      // ── LAYER COMUNI CALABRIA ─────────────────────────────────────────
+      map.addSource('comuni-source', {
         type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: []   // ← metti qui i tuoi dati, o caricali sotto
-        }
+        data: 'https://pierf94.github.io/touristic-wui/calabria_muni_metric.geojson'
       });
 
       map.addLayer({
-        id: 'wui-layer',
+        id: 'comuni-layer',
         type: 'fill',
-        source: 'wui-source',
+        source: 'comuni-source',
         paint: {
-          'fill-color': '#e74c3c',
-          'fill-opacity': 0.5,
-          'fill-outline-color': '#c0392b'
+          'fill-color': [
+            'interpolate', ['linear'], ['get', 'WUI_A_rel_visual'],
+            0,      '#fde8e8',
+            0.01,   '#f48a8a',
+            0.1,    '#e74c3c',
+            0.5,    '#922b21',
+            1,      '#1a0000'
+          ],
+          'fill-opacity': 0.75,
+          'fill-outline-color': 'rgba(255,255,255,0.15)'
         }
       });
-
-
-      // ── LAYER THS ─────────────────────────────────────────────────────
-      map.addSource('ths-source', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: []   // ← metti qui i tuoi dati
-        }
-      });
-
-      map.addLayer({
-        id: 'ths-layer',
-        type: 'fill',
-        source: 'ths-source',
-        paint: {
-          'fill-color': '#f39c12',
-          'fill-opacity': 0.6,
-          'fill-outline-color': '#e67e22'
-        }
-      });
-
-      // ── ESEMPIO: colorazione per attributo numerico ───────────────────
-      // Se il tuo GeoJSON ha un campo "valore" (numero 0-1),
-      // puoi colorare con una scala così:
-      //
-      // 'fill-color': [
-      //   'interpolate', ['linear'], ['get', 'valore'],
-      //   0,    '#fde8e8',
-      //   0.01, '#f48a8a',
-      //   0.1,  '#e74c3c',
-      //   0.5,  '#922b21',
-      //   1,    '#1a0000'
-      // ]
-
 
       // ── TOOLTIP AL HOVER ──────────────────────────────────────────────
       const tooltip = document.getElementById('tooltip');
 
-      ['wui-layer', 'ths-layer'].forEach(layerId => {
-        map.on('mousemove', layerId, (e) => {
-          const props = e.features[0].properties;
-          map.getCanvas().style.cursor = 'pointer';
+      map.on('mousemove', 'comuni-layer', (e) => {
+        const props = e.features[0].properties;
+        map.getCanvas().style.cursor = 'pointer';
 
-          // Costruisce il contenuto del tooltip con tutte le proprietà
-          const rows = Object.entries(props)
-            .map(([k, v]) => `<b>${k}:</b> ${v}`)
-            .join('<br>');
+        const nome = props.NOME_COM || props.name || props.Nome || '';
+        const valore = props.WUI_A_rel_visual !== undefined
+          ? Number(props.WUI_A_rel_visual).toFixed(4)
+          : 'N/D';
 
-          tooltip.innerHTML = rows;
-          tooltip.style.display = 'block';
-          tooltip.style.left = (e.point.x + 14) + 'px';
-          tooltip.style.top  = (e.point.y - 10) + 'px';
-        });
+        tooltip.innerHTML = `
+          <b>${nome}</b><br>
+          WUI / Comune: <b>${valore}</b>
+        `;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.point.x + 14) + 'px';
+        tooltip.style.top  = (e.point.y - 10) + 'px';
+      });
 
-        map.on('mouseleave', layerId, () => {
-          map.getCanvas().style.cursor = '';
-          tooltip.style.display = 'none';
-        });
+      map.on('mouseleave', 'comuni-layer', () => {
+        map.getCanvas().style.cursor = '';
+        tooltip.style.display = 'none';
       });
 
     }); // fine map.on('load')
@@ -383,81 +325,7 @@
     }
 
 
-    // ══════════════════════════════════════════════
-    // 4. CARICA GEOJSON DA FILE LOCALE
-    // ══════════════════════════════════════════════
 
-    let dynamicLayerCount = 0;
-
-    function loadGeoJSON(input) {
-      const file = input.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const geojson = JSON.parse(e.target.result);
-          const id = 'dynamic-layer-' + dynamicLayerCount++;
-          const colors = ['#3498db','#2ecc71','#9b59b6','#1abc9c','#e67e22'];
-          const color = colors[dynamicLayerCount % colors.length];
-
-          map.addSource(id + '-src', { type: 'geojson', data: geojson });
-          map.addLayer({
-            id: id,
-            type: 'fill',
-            source: id + '-src',
-            paint: {
-              'fill-color': color,
-              'fill-opacity': 0.5,
-              'fill-outline-color': color
-            }
-          });
-
-          // Aggiungi toggle nel pannello
-          const panel = document.getElementById('layer-panel');
-          const div = document.createElement('div');
-          div.className = 'layer-toggle';
-          div.innerHTML = `
-            <label>${file.name.replace('.geojson','').replace('.json','')}</label>
-            <label class="switch">
-              <input type="checkbox" checked onchange="toggleLayer('${id}', this.checked)">
-              <span class="slider"></span>
-            </label>`;
-          panel.appendChild(div);
-
-          // Zoom sull'extent del layer caricato
-          const bbox = turf_bbox(geojson);
-          if (bbox) map.fitBounds(bbox, { padding: 40 });
-
-          alert('Layer caricato: ' + file.name);
-        } catch(err) {
-          alert('Errore nel file GeoJSON: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-      input.value = ''; // reset input
-    }
-
-    // Calcola bbox senza dipendenze esterne
-    function turf_bbox(geojson) {
-      let minLng=Infinity, minLat=Infinity, maxLng=-Infinity, maxLat=-Infinity;
-      const coords = [];
-      const extract = (c) => {
-        if (typeof c[0] === 'number') coords.push(c);
-        else c.forEach(extract);
-      };
-      (geojson.features || [geojson]).forEach(f => {
-        if (f.geometry) extract(f.geometry.coordinates);
-      });
-      if (!coords.length) return null;
-      coords.forEach(([lng,lat]) => {
-        if (lng < minLng) minLng = lng;
-        if (lat < minLat) minLat = lat;
-        if (lng > maxLng) maxLng = lng;
-        if (lat > maxLat) maxLat = lat;
-      });
-      return [[minLng, minLat], [maxLng, maxLat]];
-    }
 
   </script>
 </body>
