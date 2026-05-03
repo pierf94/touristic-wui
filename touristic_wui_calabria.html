@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mappa Interattiva - Calabria</title>
+
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #0d1117;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 10;
+      padding: 14px 20px;
+      background: linear-gradient(to bottom, rgba(13,17,23,0.95), transparent);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: normal;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    header span {
+      font-size: 0.75rem;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── MAPPA ── */
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* ── PANNELLO CONTROLLI LAYER ── */
+    #layer-panel {
+      position: absolute;
+      top: 60px;
+      right: 16px;
+      z-index: 10;
+      background: rgba(13, 17, 23, 0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 14px 16px;
+      min-width: 200px;
+      backdrop-filter: blur(8px);
+    }
+
+    #layer-panel h2 {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .layer-toggle label {
+      font-size: 0.82rem;
+      color: #ccc;
+      cursor: pointer;
+    }
+
+    /* Toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #333;
+      border-radius: 20px;
+      transition: background 0.3s;
+    }
+
+    .slider:before {
+      content: '';
+      position: absolute;
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    input:checked + .slider { background: #c0392b; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* ── LEGENDA ── */
+    #legend {
+      position: absolute;
+      bottom: 30px;
+      left: 16px;
+      z-index: 10;
+      background: rgba(13, 17, 23, 0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 14px 16px;
+      min-width: 180px;
+      backdrop-filter: blur(8px);
+    }
+
+    #legend h2 {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      color: #bbb;
+    }
+
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ── TOOLTIP HOVER ── */
+    #tooltip {
+      position: absolute;
+      z-index: 20;
+      background: rgba(13,17,23,0.95);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: #ddd;
+      pointer-events: none;
+      display: none;
+      max-width: 240px;
+      line-height: 1.6;
+    }
+
+    /* ── BOTTONE CARICA GEOJSON ── */
+    #load-btn {
+      position: absolute;
+      bottom: 30px;
+      right: 16px;
+      z-index: 10;
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+    }
+
+    #load-btn:hover { background: #e74c3c; }
+
+    #file-input { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Mappa Interattiva</h1>
+    <span>Calabria · Wildland-Urban Interface</span>
+  </header>
+
+  <div id="map"></div>
+  <div id="tooltip"></div>
+
+  <!-- Pannello layer -->
+  <div id="layer-panel">
+    <h2>Layer</h2>
+
+    <!-- Esempio layer 1 - WUI -->
+    <div class="layer-toggle">
+      <label for="toggle-wui">WUI Polygons</label>
+      <label class="switch">
+        <input type="checkbox" id="toggle-wui" checked onchange="toggleLayer('wui-layer', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Esempio layer 2 - THS -->
+    <div class="layer-toggle">
+      <label for="toggle-ths">THS Hotspot</label>
+      <label class="switch">
+        <input type="checkbox" id="toggle-ths" checked onchange="toggleLayer('ths-layer', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Aggiungi altri layer qui sopra con lo stesso pattern -->
+  </div>
+
+  <!-- Legenda -->
+  <div id="legend">
+    <h2>Legenda</h2>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#e74c3c;opacity:0.8;"></div>
+      <span>WUI Area</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#f39c12;opacity:0.8;"></div>
+      <span>THS Hotspot</span>
+    </div>
+    <!-- Aggiungi altre voci legenda qui -->
+  </div>
+
+  <!-- Bottone carica GeoJSON da file locale -->
+  <button id="load-btn" onclick="document.getElementById('file-input').click()">
+    + Carica GeoJSON
+  </button>
+  <input type="file" id="file-input" accept=".geojson,.json" onchange="loadGeoJSON(this)">
+
+  <script>
+    // ══════════════════════════════════════════════
+    // 1. CONFIGURAZIONE
+    // ══════════════════════════════════════════════
+
+    // ⚠️ Sostituisci con il tuo token da mapbox.com/account/access-tokens
+    mapboxgl.accessToken = 'pk.eyJ1IjoicGllcnBhb2xvMSIsImEiOiJjbW9wd2UyOXExbGl3MnJzYmcza2lvdHFrIn0.o2F9v-yRVmY5BMIZRaF78g';
+
+    // Centro sulla Calabria
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/dark-v11',  // stile scuro, cambia a piacere
+      center: [16.55, 38.90],   // longitudine, latitudine Calabria
+      zoom: 7,
+      minZoom: 4,
+      maxZoom: 18
+    });
+
+    // Controlli navigazione (zoom +/-)
+    map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+
+    // Scala
+    map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+
+    // ══════════════════════════════════════════════
+    // 2. CARICAMENTO LAYER QUANDO LA MAPPA È PRONTA
+    // ══════════════════════════════════════════════
+
+    map.on('load', () => {
+
+      // ── LAYER WUI (esempio con GeoJSON inline o URL) ──────────────────
+      // Puoi sostituire il GeoJSON inline con un URL:
+      //   data: 'https://tuoserver.com/wui.geojson'
+      // oppure con un file locale caricato via loadGeoJSON()
+
+      map.addSource('wui-source', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []   // ← metti qui i tuoi dati, o caricali sotto
+        }
+      });
+
+      map.addLayer({
+        id: 'wui-layer',
+        type: 'fill',
+        source: 'wui-source',
+        paint: {
+          'fill-color': '#e74c3c',
+          'fill-opacity': 0.5,
+          'fill-outline-color': '#c0392b'
+        }
+      });
+
+
+      // ── LAYER THS ─────────────────────────────────────────────────────
+      map.addSource('ths-source', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []   // ← metti qui i tuoi dati
+        }
+      });
+
+      map.addLayer({
+        id: 'ths-layer',
+        type: 'fill',
+        source: 'ths-source',
+        paint: {
+          'fill-color': '#f39c12',
+          'fill-opacity': 0.6,
+          'fill-outline-color': '#e67e22'
+        }
+      });
+
+      // ── ESEMPIO: colorazione per attributo numerico ───────────────────
+      // Se il tuo GeoJSON ha un campo "valore" (numero 0-1),
+      // puoi colorare con una scala così:
+      //
+      // 'fill-color': [
+      //   'interpolate', ['linear'], ['get', 'valore'],
+      //   0,    '#fde8e8',
+      //   0.01, '#f48a8a',
+      //   0.1,  '#e74c3c',
+      //   0.5,  '#922b21',
+      //   1,    '#1a0000'
+      // ]
+
+
+      // ── TOOLTIP AL HOVER ──────────────────────────────────────────────
+      const tooltip = document.getElementById('tooltip');
+
+      ['wui-layer', 'ths-layer'].forEach(layerId => {
+        map.on('mousemove', layerId, (e) => {
+          const props = e.features[0].properties;
+          map.getCanvas().style.cursor = 'pointer';
+
+          // Costruisce il contenuto del tooltip con tutte le proprietà
+          const rows = Object.entries(props)
+            .map(([k, v]) => `<b>${k}:</b> ${v}`)
+            .join('<br>');
+
+          tooltip.innerHTML = rows;
+          tooltip.style.display = 'block';
+          tooltip.style.left = (e.point.x + 14) + 'px';
+          tooltip.style.top  = (e.point.y - 10) + 'px';
+        });
+
+        map.on('mouseleave', layerId, () => {
+          map.getCanvas().style.cursor = '';
+          tooltip.style.display = 'none';
+        });
+      });
+
+    }); // fine map.on('load')
+
+
+    // ══════════════════════════════════════════════
+    // 3. TOGGLE VISIBILITÀ LAYER
+    // ══════════════════════════════════════════════
+
+    function toggleLayer(layerId, visible) {
+      if (!map.getLayer(layerId)) return;
+      map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+    }
+
+
+    // ══════════════════════════════════════════════
+    // 4. CARICA GEOJSON DA FILE LOCALE
+    // ══════════════════════════════════════════════
+
+    let dynamicLayerCount = 0;
+
+    function loadGeoJSON(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const geojson = JSON.parse(e.target.result);
+          const id = 'dynamic-layer-' + dynamicLayerCount++;
+          const colors = ['#3498db','#2ecc71','#9b59b6','#1abc9c','#e67e22'];
+          const color = colors[dynamicLayerCount % colors.length];
+
+          map.addSource(id + '-src', { type: 'geojson', data: geojson });
+          map.addLayer({
+            id: id,
+            type: 'fill',
+            source: id + '-src',
+            paint: {
+              'fill-color': color,
+              'fill-opacity': 0.5,
+              'fill-outline-color': color
+            }
+          });
+
+          // Aggiungi toggle nel pannello
+          const panel = document.getElementById('layer-panel');
+          const div = document.createElement('div');
+          div.className = 'layer-toggle';
+          div.innerHTML = `
+            <label>${file.name.replace('.geojson','').replace('.json','')}</label>
+            <label class="switch">
+              <input type="checkbox" checked onchange="toggleLayer('${id}', this.checked)">
+              <span class="slider"></span>
+            </label>`;
+          panel.appendChild(div);
+
+          // Zoom sull'extent del layer caricato
+          const bbox = turf_bbox(geojson);
+          if (bbox) map.fitBounds(bbox, { padding: 40 });
+
+          alert('Layer caricato: ' + file.name);
+        } catch(err) {
+          alert('Errore nel file GeoJSON: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      input.value = ''; // reset input
+    }
+
+    // Calcola bbox senza dipendenze esterne
+    function turf_bbox(geojson) {
+      let minLng=Infinity, minLat=Infinity, maxLng=-Infinity, maxLat=-Infinity;
+      const coords = [];
+      const extract = (c) => {
+        if (typeof c[0] === 'number') coords.push(c);
+        else c.forEach(extract);
+      };
+      (geojson.features || [geojson]).forEach(f => {
+        if (f.geometry) extract(f.geometry.coordinates);
+      });
+      if (!coords.length) return null;
+      coords.forEach(([lng,lat]) => {
+        if (lng < minLng) minLng = lng;
+        if (lat < minLat) minLat = lat;
+        if (lng > maxLng) maxLng = lng;
+        if (lat > maxLat) maxLat = lat;
+      });
+      return [[minLng, minLat], [maxLng, maxLat]];
+    }
+
+  </script>
+</body>
+</html>
