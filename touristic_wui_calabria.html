@@ -48,6 +48,40 @@
       letter-spacing: 0.05em;
     }
 
+    /* ── PANNELLO INFO HOVER ── */
+    #info-panel {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(13, 17, 23, 0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 14px 20px;
+      min-width: 260px;
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+
+    #info-hint {
+      font-size: 0.78rem;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+
+    #info-nome {
+      font-size: 1rem;
+      color: #ffffff;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    #info-valore {
+      font-size: 0.82rem;
+      color: #bbb;
+    }
+
     /* ── MAPPA ── */
     #map {
       flex: 1;
@@ -188,6 +222,15 @@
     <span>Calabria · Wildland-Urban Interface</span>
   </header>
 
+  <!-- Pannello info hover in alto a destra -->
+  <div id="info-panel">
+    <div id="info-hint">Passa il mouse su un comune</div>
+    <div id="info-content" style="display:none;">
+      <div id="info-nome"></div>
+      <div id="info-valore"></div>
+    </div>
+  </div>
+
   <div id="map"></div>
   <div id="tooltip"></div>
 
@@ -196,9 +239,17 @@
     <h2>Layer</h2>
 
     <div class="layer-toggle">
-      <label for="toggle-comuni">Comuni Calabria</label>
+      <label for="toggle-comuni">WUI_DI</label>
       <label class="switch">
         <input type="checkbox" id="toggle-comuni" checked onchange="toggleLayer('comuni-layer', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="layer-toggle">
+      <label for="toggle-hdi">HDI</label>
+      <label class="switch">
+        <input type="checkbox" id="toggle-hdi" checked onchange="toggleLayer('hdi-layer', this.checked)">
         <span class="slider"></span>
       </label>
     </div>
@@ -206,26 +257,30 @@
 
   <!-- Legenda -->
   <div id="legend">
-    <h2>WUI Area / Comune</h2>
+    <h2>WUI area / comune (-)</h2>
     <div class="legend-item">
-      <div class="legend-color" style="background:#fde8e8;"></div>
-      <span>Molto basso</span>
+      <div class="legend-color" style="background:#ffffff;border:1px solid #555;"></div>
+      <span>0.0</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#fcd5d5;"></div>
+      <span>0.00001</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background:#f48a8a;"></div>
-      <span>Basso</span>
+      <span>0.0001</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background:#e74c3c;"></div>
-      <span>Medio</span>
+      <span>0.001</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background:#922b21;"></div>
-      <span>Alto</span>
+      <span>0.01</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background:#1a0000;"></div>
-      <span>Molto alto</span>
+      <span>0.1+</span>
     </div>
   </div>
 
@@ -275,41 +330,102 @@
         paint: {
           'fill-color': [
             'interpolate', ['linear'], ['get', 'WUI_A_rel_visual'],
-            0,      '#fde8e8',
-            0.01,   '#f48a8a',
-            0.1,    '#e74c3c',
-            0.5,    '#922b21',
-            1,      '#1a0000'
+            0,        '#ffffff',
+            0.00001,  '#fcd5d5',
+            0.0001,   '#f48a8a',
+            0.001,    '#e74c3c',
+            0.01,     '#922b21',
+            0.114111, '#1a0000'
           ],
           'fill-opacity': 0.75,
           'fill-outline-color': 'rgba(255,255,255,0.15)'
         }
       });
 
-      // ── TOOLTIP AL HOVER ──────────────────────────────────────────────
+      // ── LAYER HDI ─────────────────────────────────────────────────────
+      // Quando hai il file pronto, sostituisci il path qui sotto
+      map.addSource('hdi-source', {
+        type: 'geojson',
+        data: 'https://pierf94.github.io/touristic-wui/hdi.geojson'
+      });
+
+      map.addLayer({
+        id: 'hdi-layer',
+        type: 'fill',
+        source: 'hdi-source',
+        paint: {
+          'fill-color': [
+            'interpolate', ['linear'], ['get', 'HDI'],
+            0,      '#ffffff',
+            0.00001,'#fcd5d5',
+            0.0001, '#f48a8a',
+            0.001,  '#e74c3c',
+            0.01,   '#922b21',
+            0.1,    '#1a0000'
+          ],
+          'fill-opacity': 0.75,
+          'fill-outline-color': 'rgba(255,255,255,0.15)'
+        }
+      });
+
+
       const tooltip = document.getElementById('tooltip');
 
       map.on('mousemove', 'comuni-layer', (e) => {
         const props = e.features[0].properties;
         map.getCanvas().style.cursor = 'pointer';
 
-        const nome = props.NOME_COM || props.name || props.Nome || '';
+        const nome = props.NOME_COM || props.name || props.Nome || props.NOME || '';
         const valore = props.WUI_A_rel_visual !== undefined
-          ? Number(props.WUI_A_rel_visual).toFixed(4)
+          ? Number(props.WUI_A_rel_visual).toFixed(6)
           : 'N/D';
 
-        tooltip.innerHTML = `
-          <b>${nome}</b><br>
-          WUI / Comune: <b>${valore}</b>
-        `;
+        // Tooltip mobile
+        tooltip.innerHTML = `<b>${nome}</b><br>WUI / Comune: <b>${valore}</b>`;
         tooltip.style.display = 'block';
         tooltip.style.left = (e.point.x + 14) + 'px';
         tooltip.style.top  = (e.point.y - 10) + 'px';
+
+        // Pannello info fisso
+        document.getElementById('info-hint').style.display = 'none';
+        document.getElementById('info-content').style.display = 'block';
+        document.getElementById('info-nome').textContent = nome;
+        document.getElementById('info-valore').textContent = 'WUI / Comune: ' + valore;
       });
 
       map.on('mouseleave', 'comuni-layer', () => {
         map.getCanvas().style.cursor = '';
         tooltip.style.display = 'none';
+        document.getElementById('info-hint').style.display = 'block';
+        document.getElementById('info-content').style.display = 'none';
+      });
+
+      // ── TOOLTIP HDI ───────────────────────────────────────────────────
+      map.on('mousemove', 'hdi-layer', (e) => {
+        const props = e.features[0].properties;
+        map.getCanvas().style.cursor = 'pointer';
+
+        const nome = props.NOME_COM || props.name || props.Nome || props.NOME || '';
+        const valore = props.HDI !== undefined
+          ? Number(props.HDI).toFixed(6)
+          : 'N/D';
+
+        tooltip.innerHTML = `<b>${nome}</b><br>HDI: <b>${valore}</b>`;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.point.x + 14) + 'px';
+        tooltip.style.top  = (e.point.y - 10) + 'px';
+
+        document.getElementById('info-hint').style.display = 'none';
+        document.getElementById('info-content').style.display = 'block';
+        document.getElementById('info-nome').textContent = nome;
+        document.getElementById('info-valore').textContent = 'HDI: ' + valore;
+      });
+
+      map.on('mouseleave', 'hdi-layer', () => {
+        map.getCanvas().style.cursor = '';
+        tooltip.style.display = 'none';
+        document.getElementById('info-hint').style.display = 'block';
+        document.getElementById('info-content').style.display = 'none';
       });
 
     }); // fine map.on('load')
