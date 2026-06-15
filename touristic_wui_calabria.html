@@ -319,7 +319,7 @@
       // ── LAYER COMUNI CALABRIA ─────────────────────────────────────────
       map.addSource('comuni-source', {
         type: 'geojson',
-        data: 'https://pierf94.github.io/touristic-wui/Calabria_muni_metric_acc_cartanatura.geojson'
+        data: 'https://pierf94.github.io/touristic-wui/calabria_muni_metric_acc_cartanatura.geojson'
       });
 
       map.addLayer({
@@ -345,7 +345,7 @@
       // Quando hai il file pronto, sostituisci il path qui sotto
       map.addSource('hdi-source', {
         type: 'geojson',
-        data: 'https://pierf94.github.io/touristic-wui/hdi.geojson'
+        data: 'https://pierf94.github.io/touristic-wui/calabria_muni_metric_acc_cartanatura.geojson'
       });
 
       map.addLayer({
@@ -354,7 +354,7 @@
         source: 'hdi-source',
         paint: {
           'fill-color': [
-            'interpolate', ['linear'], ['get', 'HDI'],
+            'interpolate', ['linear'], ['get', 'HSP_A_relation'],
             0,      '#ffffff',
             0.00001,'#fcd5d5',
             0.0001, '#f48a8a',
