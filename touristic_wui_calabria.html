@@ -244,7 +244,6 @@
         <span class="slider"></span>
       </label>
     </div>
-  </div>
 
     <div class="layer-toggle">
       <label for="toggle-comuni">WUI_DI</label>
@@ -253,6 +252,7 @@
         <span class="slider"></span>
       </label>
     </div>
+  </div>
 
   <!-- Legenda -->
   <div id="legend">
@@ -406,8 +406,8 @@
         map.getCanvas().style.cursor = 'pointer';
 
         const nome = props.LAU_NAME || '';
-        const valore = props.HDI !== undefined
-          ? Number(props.HDI).toFixed(6)
+        const valore = props.HSP_A_rel_visual !== undefined
+          ? Number(props.HSP_A_rel_visual).toFixed(6)
           : 'N/D';
 
         tooltip.innerHTML = `<b>${nome}</b><br>HDI: <b>${valore}</b>`;
